@@ -9,7 +9,7 @@ import re
 import sys
 from tempfile import NamedTemporaryFile
 from time import sleep
-from urllib.parse import urlencode, urljoin, urlsplit
+from urllib.parse import parse_qs, urlencode, urljoin, urlsplit
 from urllib.request import Request, urlopen
 
 from lxml import etree, html
@@ -75,6 +75,24 @@ def http_url(page, target):
 
 def is_attachment(node):
     return urlsplit(node.get("href", "")).path.rsplit("/", 1)[-1] == "t_img"
+
+
+def image_id(url):
+    parts = urlsplit(url)
+    if (parts.scheme, parts.netloc, parts.path) != ("https", "www.mhlw.go.jp", "/web/t_img"):
+        return None
+    ids = parse_qs(parts.query, keep_blank_values=True).get("img", [])
+    return ids[0] if len(ids) == 1 and re.fullmatch(r"[0-9]+", ids[0]) else None
+
+
+def image_links(nodes, url):
+    images = {}
+    for node in nodes:
+        if is_attachment(node):
+            target = http_url(url, node.get("href"))
+            if target:
+                images[target] = node_text(node) or "画像"
+    return images
 
 
 def render(node, url, in_table=False):
@@ -145,18 +163,13 @@ def read_page(document, notice_id, page, total):
     if not body:
         raise ValueError(f"本文が空です: {url}")
 
-    attachments = {}
-    for link in document.xpath(
+    attachments = image_links(document.xpath(
         "//div[contains(concat(' ', normalize-space(@class), ' '), ' imgDiv ')]//a[@href]"
-    ):
-        if is_attachment(link):
-            target = http_url(url, link.get("href"))
-            if target:
-                attachments[target] = node_text(link) or "画像"
+    ), url)
     return container, re.sub(r"\n{3,}", "\n\n", body), attachments
 
 
-def convert(notice_id, source):
+def source_pages(notice_id, source):
     if not isinstance(source, dict) or source.get("notice_id") != notice_id:
         raise ValueError("保存原本の通知IDが一致しません")
     pages = source.get("pages")
@@ -171,13 +184,37 @@ def convert(notice_id, source):
     total = page_count(first_page)
     if len(pages) != total:
         raise ValueError("保存原本のページ数が本文の表示と一致しません")
+    return pages, first_page, acquired
 
+
+def image_transcripts(images, directory, included):
+    sections = []
+    for url, label in images.items():
+        identifier = image_id(url)
+        if identifier is None or identifier in included:
+            continue
+        try:
+            content = (directory / f"{identifier}.md").read_text(encoding="utf-8-sig").strip()
+        except FileNotFoundError:
+            continue
+        if content:
+            sections.extend((
+                f"**画像の文字起こし（原本照合済み）** {markdown_link(label, url)}",
+                content,
+            ))
+            included.add(identifier)
+    return sections
+
+
+def convert(notice_id, source, ocr_dir=None):
+    pages, first_page, acquired = source_pages(notice_id, source)
     body_sections = []
     images = {}
+    included_transcripts = set()
     for page, raw in enumerate(pages, start=1):
         url = page_url(notice_id, page)
         document = first_page if page == 1 else parse_page(raw)
-        container, body, attachments = read_page(document, notice_id, page, total)
+        container, body, attachments = read_page(document, notice_id, page, len(pages))
         if page == 1:
             title = container.xpath(".//p[@class='title-irregular']")
             heading = node_text(title[0]).removeprefix("○") if title else ""
@@ -199,6 +236,9 @@ def convert(notice_id, source):
         body_sections.extend((
             f"## 本文（{markdown_link(f'原本 {page}ページ', url)}）", body
         ))
+        if ocr_dir is not None:
+            body_images = image_links(container.xpath(".//a[@href]"), url)
+            body_sections.extend(image_transcripts(body_images, ocr_dir, included_transcripts))
         for image_url, label in attachments.items():
             images.setdefault(image_url, (page, label))
 
@@ -210,15 +250,22 @@ def convert(notice_id, source):
             for image_url, (page, label) in images.items()
         ]
         sections.extend(("## 添付画像", "\n".join(rows)))
+        if ocr_dir is not None:
+            attachment_labels = {url: label for url, (_, label) in images.items()}
+            sections.extend(image_transcripts(attachment_labels, ocr_dir, included_transcripts))
     return "\n\n".join(sections) + "\n"
 
 
 def write_file(path, content):
+    write_bytes(path, content.encode("utf-8"))
+
+
+def write_bytes(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
     with NamedTemporaryFile(dir=path.parent, delete=False) as output:
         temporary = Path(output.name)
     try:
-        temporary.write_bytes(content.encode("utf-8"))
+        temporary.write_bytes(content)
         temporary.replace(path)
     finally:
         temporary.unlink(missing_ok=True)
@@ -228,6 +275,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("notice_id", help="通知本文URLの dataId")
     parser.add_argument("--out", type=Path, default=Path("output"), help="出力フォルダ")
+    parser.add_argument("--ocr-dir", type=Path, help="原本照合済みの画像ID.mdを置いたフォルダ")
     originals = parser.add_mutually_exclusive_group()
     originals.add_argument("--save-source", type=Path, help="取得したHTMLを保存するJSONファイル")
     originals.add_argument("--source", type=Path, help="保存した原本JSONからオフラインで変換")
@@ -240,12 +288,14 @@ def main():
         parser.error("原本JSONにはMarkdownと異なる出力先を指定してください")
     if args.source and args.source.resolve() == target.resolve():
         parser.error("原本JSONとMarkdownの出力先を分けてください")
+    if args.ocr_dir is not None and not args.ocr_dir.is_dir():
+        parser.error("--ocr-dir には作成済みのフォルダを指定してください")
     try:
         if args.source:
             source = json.loads(args.source.read_text(encoding="utf-8"))
         else:
             source = download(args.notice_id)
-        markdown = convert(args.notice_id, source)
+        markdown = convert(args.notice_id, source, args.ocr_dir)
         if args.save_source:
             write_file(args.save_source, json.dumps(source, ensure_ascii=False) + "\n")
         write_file(target, markdown)
