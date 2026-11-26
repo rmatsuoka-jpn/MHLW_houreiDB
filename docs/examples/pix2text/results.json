@@ -1,0 +1,142 @@
+[
+  {
+    "id": "7913007",
+    "expected": "n_{D}^{20}",
+    "variant": "original",
+    "latex": "\\operatorname { n o } ^ { 2 0 }",
+    "eos": true
+  },
+  {
+    "id": "7913007",
+    "expected": "n_{D}^{20}",
+    "variant": "padded",
+    "latex": "\\mathrm { n } _ { 0 } ^ { 2 0 }",
+    "eos": true
+  },
+  {
+    "id": "7913008",
+    "expected": "d_{4}^{20}",
+    "variant": "original",
+    "latex": "\\mathbf { d } _ { 4 } ^ { 2 0 }",
+    "eos": true
+  },
+  {
+    "id": "7913008",
+    "expected": "d_{4}^{20}",
+    "variant": "padded",
+    "latex": "\\mathrm { d ^ { 2 0 } }",
+    "eos": true
+  },
+  {
+    "id": "S01",
+    "expected": "x_{i}^{2}+y_{j}^{3}",
+    "variant": "original",
+    "latex": "\\mathbf { x _ { i } ^ { 2 } + y _ { j } ^ { 3 } }",
+    "eos": true
+  },
+  {
+    "id": "S01",
+    "expected": "x_{i}^{2}+y_{j}^{3}",
+    "variant": "padded",
+    "latex": "\\mathbf { x _ { i } ^ { 2 } + y _ { j } ^ { 3 } }",
+    "eos": true
+  },
+  {
+    "id": "S02",
+    "expected": "\\frac{a+b}{c-d}",
+    "variant": "original",
+    "latex": "\\frac { \\mathrm { a + b } } { \\mathrm { c - d } }",
+    "eos": true
+  },
+  {
+    "id": "S02",
+    "expected": "\\frac{a+b}{c-d}",
+    "variant": "padded",
+    "latex": "\\frac { \\mathrm { a + b } } { \\mathrm { c - d } }",
+    "eos": true
+  },
+  {
+    "id": "S03",
+    "expected": "\\sqrt{x+1}=y",
+    "variant": "original",
+    "latex": "\\sqrt { \\mathrm { x } + \\mathrm { I } } \\mathrm { = } \\mathrm { y }",
+    "eos": true
+  },
+  {
+    "id": "S03",
+    "expected": "\\sqrt{x+1}=y",
+    "variant": "padded",
+    "latex": "\\sqrt { \\mathrm { x + I = y } }",
+    "eos": true
+  },
+  {
+    "id": "S04",
+    "expected": "S=\\frac{\\sum_{i=1}^{n}w_i x_i}{\\sum_{i=1}^{n}w_i}",
+    "variant": "original",
+    "latex": "\\mathrm { S s s } \\mathrm { S s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\mathrm { s s } \\",
+    "eos": false
+  },
+  {
+    "id": "S04",
+    "expected": "S=\\frac{\\sum_{i=1}^{n}w_i x_i}{\\sum_{i=1}^{n}w_i}",
+    "variant": "padded",
+    "latex": "\\mathrm { S s } \\! = \\! \\! \\frac { \\sum _ { i = 1 } ^ { n } \\mathbf { w } _ { i } \\mathbf { x } _ { i } } { \\sum _ { i = 1 } ^ { n } \\mathbf { w } _ { i } }",
+    "eos": true
+  },
+  {
+    "id": "S05",
+    "expected": "\\lim_{h\\to0}\\frac{f(x+h)-f(x)}{h}=f'(x)",
+    "variant": "original",
+    "latex": "\\mathrm { l i m _ { h \\to 0 } } \\frac { \\mathrm { f ( x + h ) - f ( x ) } } { \\mathrm { h } } { \\mathrm { = f ( x ) } }",
+    "eos": true
+  },
+  {
+    "id": "S05",
+    "expected": "\\lim_{h\\to0}\\frac{f(x+h)-f(x)}{h}=f'(x)",
+    "variant": "padded",
+    "latex": "\\mathrm { l i m _ { h \\to 0 } } \\frac { \\mathrm { f ( x + h ) - f ( x ) } } { \\mathrm { h } } { \\mathrm { = f ( x ) } }",
+    "eos": true
+  },
+  {
+    "id": "S06",
+    "expected": "R=\\frac{A-B}{C}\\times100\\geq80\\%",
+    "variant": "original",
+    "latex": "\\mathrm { R = } \\frac { \\mathrm { A - B } } { \\mathrm { C } } \\times \\mathrm { 1 } 0 0 \\geq \\mathrm { 8 } 0 \\%",
+    "eos": true
+  },
+  {
+    "id": "S06",
+    "expected": "R=\\frac{A-B}{C}\\times100\\geq80\\%",
+    "variant": "padded",
+    "latex": "\\mathrm { R = } \\frac { \\mathrm { A - B } } { \\mathrm { C } } \\times \\mathrm { 1 } \\mathrm { 0 } \\mathrm { 0 \\geq } \\mathrm { 8 } \\mathrm { 0 } \\mathrm { Y _ { 6 } }",
+    "eos": true
+  },
+  {
+    "id": "S07",
+    "expected": "\\int_{0}^{1}x^2\\,dx",
+    "variant": "original",
+    "latex": "\\int _ { 0 } ^ { 1 } \\! \\mathrm { x } ^ { 2 } \\, \\mathrm { d } \\mathrm { x }",
+    "eos": true
+  },
+  {
+    "id": "S07",
+    "expected": "\\int_{0}^{1}x^2\\,dx",
+    "variant": "padded",
+    "latex": "\\int _ { 0 } ^ { 1 } \\! \\mathrm { x } ^ { 2 } \\, \\mathrm { d } \\mathrm { x }",
+    "eos": true
+  },
+  {
+    "id": "S08",
+    "expected": "C_{6}H_{12}O_{6}",
+    "variant": "original",
+    "latex": "\\mathrm { C _ { 6 } H _ { 1 2 } O _ { 6 } }",
+    "eos": true
+  },
+  {
+    "id": "S08",
+    "expected": "C_{6}H_{12}O_{6}",
+    "variant": "padded",
+    "latex": "\\mathrm { C } _ { 6 } \\mathrm { H } _ { 1 2 } \\mathrm { O } _ { 6 }",
+    "eos": true
+  }
+]
