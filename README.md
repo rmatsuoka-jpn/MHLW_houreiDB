@@ -60,3 +60,20 @@ ndlocr-lite --sourcedir output/ocr-input --output output/ocr-output
 ```
 
 `notice_images.py` は原本の添付画像を `output/ocr-input/` に画像IDで保存します。OCR出力を原本と照合し、採用する内容をUTF-8の `画像ID.md` として `output/ocr-reviewed/` などに保存してください。変換時にそのフォルダを `--ocr-dir` で指定します。
+
+### 低解像度の画像で検証する
+
+[厚生省職員表彰規程の実施について](https://www.mhlw.go.jp/web/t_doc?dataId=00ta0019&dataType=1&pageNo=1) の添付画像2点（各630 × 916ピクセル）を使えます。Markdownは原本を目視で照合した比較用のサンプルです。
+
+| 様式 | 原本PNG | 比較用Markdown | 確認する箇所 |
+| --- | --- | --- | --- |
+| 職員の表彰について（内申） | [7914669.png](https://www.mhlw.go.jp/web/t_img_res?img=7914669) | [7914669.md](docs/examples/7914669.md) | 小さな文字の見出し、文書番号、日付、宛先 |
+| 表彰候補者名簿 | [7914670.png](https://www.mhlw.go.jp/web/t_img_res?img=7914670) | [7914670.md](docs/examples/7914670.md) | 記載例2人分の行の分離、年齢と勤続期間の対応 |
+
+```sh
+python notice_to_md.py 00ta0019 --save-source source/00ta0019.json
+python notice_images.py source/00ta0019.json --out output/ocr-input/00ta0019
+python notice_to_md.py 00ta0019 --source source/00ta0019.json --ocr-dir docs/examples --out output/with-ocr
+```
+
+画像取得コマンドは、この通知の添付画像3点を保存します。上の2点の文字起こしが `output/with-ocr/00ta0019.md` に追記されます。
