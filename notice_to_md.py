@@ -1,4 +1,4 @@
-"""Convert one notice in the MHLW database from HTML to Markdown."""
+"""Convert one document in the MHLW database from HTML to Markdown."""
 
 import argparse
 from datetime import datetime, timedelta, timezone
@@ -16,13 +16,15 @@ from lxml import etree, html
 
 
 DOCUMENT_URL = "https://www.mhlw.go.jp/web/t_doc"
+NOTICE_DATA_TYPE = 1
+DOCUMENT_DATA_TYPES = (0, NOTICE_DATA_TYPE)
 JST = timezone(timedelta(hours=9))
 TABLE_TAGS = {"table", "caption", "thead", "tbody", "tfoot", "tr", "th", "td", "br"}
 TABLE_ATTRIBUTES = ("rowspan", "colspan", "scope")
 
 
-def page_url(notice_id, page):
-    query = urlencode({"dataId": notice_id, "dataType": 1, "pageNo": page})
+def page_url(notice_id, page, data_type=NOTICE_DATA_TYPE):
+    query = urlencode({"dataId": notice_id, "dataType": data_type, "pageNo": page})
     return f"{DOCUMENT_URL}?{query}"
 
 
@@ -46,14 +48,14 @@ def page_count(document):
     return total
 
 
-def download(notice_id):
+def download(notice_id, data_type=NOTICE_DATA_TYPE):
     acquired = datetime.now(JST).date().isoformat()
-    first_page = fetch(page_url(notice_id, 1))
+    first_page = fetch(page_url(notice_id, 1, data_type))
     pages = [first_page]
     for page in range(2, page_count(parse_page(first_page)) + 1):
         sleep(1)
-        pages.append(fetch(page_url(notice_id, page)))
-    return {"notice_id": notice_id, "acquired": acquired, "pages": pages}
+        pages.append(fetch(page_url(notice_id, page, data_type)))
+    return {"notice_id": notice_id, "data_type": data_type, "acquired": acquired, "pages": pages}
 
 
 def node_text(node):
@@ -147,8 +149,8 @@ def render(node, url, in_table=False):
     return content
 
 
-def read_page(document, notice_id, page, total):
-    url = page_url(notice_id, page)
+def read_page(document, notice_id, page, total, data_type=NOTICE_DATA_TYPE):
+    url = page_url(notice_id, page, data_type)
     container = document.find(".//div[@id='contents']")
     if container is None:
         raise ValueError(f"本文の領域が見つかりません: {url}")
@@ -174,6 +176,9 @@ def source_pages(notice_id, source):
         raise ValueError("保存原本の通知IDが一致しません")
     pages = source.get("pages")
     acquired = source.get("acquired")
+    data_type = source.get("data_type", NOTICE_DATA_TYPE)
+    if type(data_type) is not int or data_type not in DOCUMENT_DATA_TYPES:
+        raise ValueError("保存原本の data_type が不正です")
     if not isinstance(pages, list) or not pages or not all(isinstance(p, str) for p in pages):
         raise ValueError("保存原本にHTML本文がありません")
     if not isinstance(acquired, str):
@@ -184,7 +189,7 @@ def source_pages(notice_id, source):
     total = page_count(first_page)
     if len(pages) != total:
         raise ValueError("保存原本のページ数が本文の表示と一致しません")
-    return pages, first_page, acquired
+    return pages, first_page, acquired, data_type
 
 
 def image_transcripts(images, directory, included):
@@ -207,14 +212,14 @@ def image_transcripts(images, directory, included):
 
 
 def convert(notice_id, source, ocr_dir=None):
-    pages, first_page, acquired = source_pages(notice_id, source)
+    pages, first_page, acquired, data_type = source_pages(notice_id, source)
     body_sections = []
     images = {}
     included_transcripts = set()
     for page, raw in enumerate(pages, start=1):
-        url = page_url(notice_id, page)
+        url = page_url(notice_id, page, data_type)
         document = first_page if page == 1 else parse_page(raw)
-        container, body, attachments = read_page(document, notice_id, page, len(pages))
+        container, body, attachments = read_page(document, notice_id, page, len(pages), data_type)
         if page == 1:
             title = container.xpath(".//p[@class='title-irregular']")
             heading = node_text(title[0]).removeprefix("○") if title else ""
@@ -223,8 +228,12 @@ def convert(notice_id, source, ocr_dir=None):
                 heading = node_text(title).removeprefix("・") if title is not None else ""
             if not heading:
                 raise ValueError(f"件名を取得できません: {url}")
-            metadata = [f"# {markdown_text(heading)}", f"- 通知ID: `{notice_id}`"]
-            for css_class, label in (("date", "発出日"), ("number", "通知番号")):
+            is_notice = data_type == NOTICE_DATA_TYPE
+            id_label = "通知ID" if is_notice else "法令ID"
+            date_label = "発出日" if is_notice else "公布日"
+            number_label = "通知番号" if is_notice else "法令番号"
+            metadata = [f"# {markdown_text(heading)}", f"- {id_label}: `{notice_id}`"]
+            for css_class, label in (("date", date_label), ("number", number_label)):
                 matches = container.xpath(f".//div[@class='head']//p[@class='{css_class}']")
                 if matches and node_text(matches[0]):
                     metadata.append(f"- {label}: {markdown_text(node_text(matches[0]))}")
@@ -246,7 +255,7 @@ def convert(notice_id, source, ocr_dir=None):
     if images:
         rows = [
             f"- {markdown_link(label, image_url)}（"
-            f"{markdown_link(f'原本 {page}ページ', page_url(notice_id, page))}）"
+            f"{markdown_link(f'原本 {page}ページ', page_url(notice_id, page, data_type))}）"
             for image_url, (page, label) in images.items()
         ]
         sections.extend(("## 添付画像", "\n".join(rows)))
@@ -273,7 +282,9 @@ def write_bytes(path, content):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("notice_id", help="通知本文URLの dataId")
+    parser.add_argument("notice_id", help="原本文書URLの dataId")
+    parser.add_argument("--data-type", type=int, choices=DOCUMENT_DATA_TYPES,
+                        help="原本文書URLの dataType（0=法令、1=通知。取得時の既定は1）")
     parser.add_argument("--out", type=Path, default=Path("output"), help="出力フォルダ")
     parser.add_argument("--ocr-dir", type=Path, help="原本照合済みの画像ID.mdを置いたフォルダ")
     originals = parser.add_mutually_exclusive_group()
@@ -293,8 +304,12 @@ def main():
     try:
         if args.source:
             source = json.loads(args.source.read_text(encoding="utf-8"))
+            if isinstance(source, dict) and args.data_type is not None:
+                if source.get("data_type", NOTICE_DATA_TYPE) != args.data_type:
+                    raise ValueError("--data-type が保存原本の data_type と一致しません")
         else:
-            source = download(args.notice_id)
+            data_type = NOTICE_DATA_TYPE if args.data_type is None else args.data_type
+            source = download(args.notice_id, data_type)
         markdown = convert(args.notice_id, source, args.ocr_dir)
         if args.save_source:
             write_file(args.save_source, json.dumps(source, ensure_ascii=False) + "\n")

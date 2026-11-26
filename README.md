@@ -39,7 +39,7 @@ python notice_to_md.py 00ta4203 --source source/00ta4203.json --out output/repro
 
 `output/00ta4203.md` と `output/reproduced/00ta4203.md` を比較できます。`source/` はGitの管理対象から除外しています。
 
-現在のスクリプトは、通知IDを指定してDBのHTML本文を1件ずつ変換するところまで対応しています。
+スクリプトは、文書IDを指定してDBのHTML本文を1件ずつ変換します。
 
 ## 添付画像の文字起こしを加える
 
@@ -77,3 +77,7 @@ python notice_to_md.py 00ta0019 --source source/00ta0019.json --ocr-dir docs/exa
 ```
 
 画像取得コマンドは、この通知の添付画像3点を保存します。上の2点の文字起こしが `output/with-ocr/00ta0019.md` に追記されます。
+
+### 法令の図や数式記号で検証する
+
+原本URLが `dataType=0` の法令は、HTML取得時に `--data-type 0` を指定します。保存原本から変換する場合は保存済みの種別を使います。既存の通知原本は従来どおり読み込めます。[タール色素の省令で試したOCR結果と再現手順](docs/81074000-image-ocr-trial.md)

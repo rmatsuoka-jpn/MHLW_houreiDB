@@ -1,4 +1,4 @@
-"""Download MHLW notice attachment images referenced by saved source HTML."""
+"""Download MHLW document attachment images referenced by saved source HTML."""
 
 import argparse
 import json
@@ -29,12 +29,12 @@ def find_images(source):
     if not isinstance(notice_id, str) or not re.fullmatch(r"[A-Za-z0-9]{1,32}", notice_id):
         raise ValueError("保存原本の通知IDが不正です")
 
-    pages, first_page, _ = source_pages(notice_id, source)
+    pages, first_page, _, data_type = source_pages(notice_id, source)
     identifiers = {}
     for page, raw in enumerate(pages, start=1):
-        url = page_url(notice_id, page)
+        url = page_url(notice_id, page, data_type)
         document = first_page if page == 1 else parse_page(raw)
-        container, _, attachments = read_page(document, notice_id, page, len(pages))
+        container, _, attachments = read_page(document, notice_id, page, len(pages), data_type)
         body_images = image_links(container.xpath(".//a[@href]"), url)
         for target in (*body_images, *attachments):
             identifier = image_id(target)
