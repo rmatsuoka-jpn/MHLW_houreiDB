@@ -25,6 +25,7 @@ python3 -m venv .venv
 `output/00ta4203.md` が生成されます。引数には、通知本文のURLにある `dataId` を指定します。出力先は `--out` で変更できます。既定の出力フォルダはGitの管理対象から除外しています。
 
 - [取得経路・変換ルール・確認手順](docs/notification-markdown.md)
+- [画像OCRの試行結果・別PCでの再現手順](docs/image-ocr-trial.md)
 - [厚生労働省法令等データベースサービス](https://www.mhlw.go.jp/hourei/)
 
 ## 保存した原本から再生成する
